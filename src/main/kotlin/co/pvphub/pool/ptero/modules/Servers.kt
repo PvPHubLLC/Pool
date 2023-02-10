@@ -74,12 +74,11 @@ class Servers(client: HttpClient, baseUrl: String, appToken: String, clientToken
 
     }
     fun getNodes(): List<Node> {
-        val r = Fuel.get("$baseUrl/api/application/nodes?include=allocations")
+        return Fuel.get("$baseUrl/api/application/nodes?include=allocations")
             .header("Authorization", "Bearer $appToken")
             .response()
             .second
-        println(r.strBody())
-        return r.jsonBody<HttpClient.PaginatedResponse<Node>>(HttpClient.PaginatedResponse::class.java).data.map { it.get(
+            .jsonBody<HttpClient.PaginatedResponse<Node>>(HttpClient.PaginatedResponse::class.java).data.map { it.get(
             Node::class.java) }
     }
     fun getServerList(): List<Server> {
@@ -125,14 +124,13 @@ class Servers(client: HttpClient, baseUrl: String, appToken: String, clientToken
                 .jsonBody(gson.toJson(RenameFiles(d, files)))
             return r.response().second.statusCode == 204
         }
-        fun uploadFile(dir: String, name: String, body: InputStream): Boolean {
+        fun uploadFile(dir: String, name: String, body: InputStream, contentType: String = "text/plain"): Boolean {
             val r = Fuel.get("${Pool.instance!!.client.baseUrl}/api/client/servers/$uuid/files/upload")
                 .header("Authorization", "Bearer ${Pool.instance!!.client.clientToken}")
                 .response().second
-            println(r.strBody())
             val givenUrl = r.jsonBody<JsonObject>(JsonObject::class.java).get("attributes").asJsonObject.get("url").asString
-            return  Fuel.upload("$givenUrl&directory=$dir").add {
-                BlobDataPart(body, "files", name, contentType = "application/gzip")
+            return Fuel.upload("$givenUrl&directory=$dir").add {
+                BlobDataPart(body, "files", name, contentType = contentType)
             }.response().second.statusCode == 204
         }
         fun getFileBytes(path: String): ByteArray {

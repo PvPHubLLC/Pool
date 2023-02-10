@@ -43,7 +43,7 @@ class Pool(pteroHost: String, appToken: String, clientToken: String) {
             val server = client.server.createServer(t)
             // wait a bit for server to setup
             sleep(uploadDelay)
-            server.uploadFile("/","tmp.tar.gz", gzContents)
+            server.uploadFile("/","tmp.tar.gz", gzContents, "application/gzip")
             server.decompressItem("tmp.tar.gz", "/")
             server.deleteItems(listOf("tmp.tar.gz"), "/")
             server.uploadFile("/",".pooldt", metaDataContents)
