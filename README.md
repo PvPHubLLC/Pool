@@ -74,7 +74,7 @@ repositories {
 and add the pool dependency
 ```kts
 dependencies {
-    implementation("co.pvphub:pool:1.0")
+    implementation("co.pvphub:pool:1.1")
 }
 ```
 then you should have pool added to your project.

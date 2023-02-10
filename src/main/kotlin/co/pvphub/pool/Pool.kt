@@ -19,28 +19,49 @@ class Pool(pteroHost: String, appToken: String, clientToken: String) {
         if(instance != null) throw PoolException("Cannot initialize multiple instances of pool, use Pool.get for proper initialization!")
         instance = this
     }
+
+    /**
+     * Gets a template by its ID, returns null if no template exists.
+     * @param id The id to look for
+     */
     fun getTemplateById(id: String): Template? {
         return templates.find { it.id == id }
     }
-    fun clearServices(t: Template, amount: Int = 1) {
+
+    /**
+     * Clears an amount of services created from a template.
+     * @param template The template to look for
+     * @param amount The amount to clear
+     */
+    fun clearServices(template: Template, amount: Int = 1) {
         val servers = client.server.getServerList().filterIndexed { i, _ -> i < amount }.filter { it.name.startsWith("[pool] ") }.filter { s ->
             val meta = getMetadataFromString(s.getFile(".pooldt"))
-            meta.template == t.id
+            meta.template == template.id
         }
         for (server in servers) {
             server.deleteServer()
         }
     }
-    fun createService(t: Template, amount: Int = 1, compile: Boolean = true, uploadDelay: Long = 15000): List<Service> {
+
+    /**
+     * Creates service(s) based on a template
+     * @param template The template
+     * @param amount The amount of services
+     * @param compile If we should call `compileTemplate` to compile the template first
+     * @param uploadDelay Time to wait for the server to setup
+     *
+     * @return Returns a list of services created.
+     */
+    fun createService(template: Template, amount: Int = 1, compile: Boolean = true, uploadDelay: Long = 15000): List<Service> {
         val servers = mutableListOf<Service>()
         repeat(amount) {
             if(compile)
-                compileTemplate(t)
-            val gzContents = ByteArrayInputStream(poolMaster.getFileBytes("compiled/${t.id}.tar.gz"))
+                compileTemplate(template)
+            val gzContents = ByteArrayInputStream(poolMaster.getFileBytes("compiled/${template.id}.tar.gz"))
             val metaDataContents = ByteArrayInputStream(
-                metadataToString(Metadata(t.id)).encodeToByteArray()
+                metadataToString(Metadata(template.id)).encodeToByteArray()
             )
-            val server = client.server.createServer(t)
+            val server = client.server.createServer(template)
             // wait a bit for server to setup
             sleep(uploadDelay)
             server.uploadFile("/","tmp.tar.gz", gzContents, "application/gzip")
@@ -48,26 +69,36 @@ class Pool(pteroHost: String, appToken: String, clientToken: String) {
             server.deleteItems(listOf("tmp.tar.gz"), "/")
             server.uploadFile("/",".pooldt", metaDataContents)
             server.sendPowerAction("start")
-            servers.add(Service(server, t))
+            servers.add(Service(server, template))
         }
         return servers
     }
-    fun getServicesRunningByTemplate(t: Template): List<Service> {
+
+    /**
+     * Returns the services running by a template
+     * @param template The template to search for
+     */
+    fun getServicesRunningByTemplate(template: Template): List<Service> {
         val services = mutableListOf<Service>()
         client.server.getServerList().filter { it.name.startsWith("[pool] ") }.map { s ->
             val meta = getMetadataFromString(s.getFile(".pooldt"))
-            if(meta.template == t.id) services.add(Service(s, t))
+            if(meta.template == template.id) services.add(Service(s, template))
         }
         return services
     }
-    fun compileTemplate(t: Template) {
-        val templateFiles = poolMaster.getFilesInDirectory("templates/${t.id}")
-        if(!poolMaster.compressItems(templateFiles, "templates/${t.id}")) throw PoolException("Something went wrong while compressing items!")
-        val gz = poolMaster.getFilesInDirectory("templates/${t.id}").find { it.endsWith(".tar.gz") }!!
+
+    /**
+     * Compiles a template (Updates the compiled version) from the templates directory.
+     * @param template The template to compile
+     */
+    fun compileTemplate(template: Template) {
+        val templateFiles = poolMaster.getFilesInDirectory("templates/${template.id}")
+        if(!poolMaster.compressItems(templateFiles, "templates/${template.id}")) throw PoolException("Something went wrong while compressing items!")
+        val gz = poolMaster.getFilesInDirectory("templates/${template.id}").find { it.endsWith(".tar.gz") }!!
         // delete old compiled ver
-        poolMaster.deleteItems(listOf("${t.id}.tar.gz"), "/compiled")
-        poolMaster.renameFiles("templates/${t.id}", listOf(
-            Servers.RenameFiles.FileRename(gz, "../../compiled/${t.id}.tar.gz")
+        poolMaster.deleteItems(listOf("${template.id}.tar.gz"), "/compiled")
+        poolMaster.renameFiles("templates/${template.id}", listOf(
+            Servers.RenameFiles.FileRename(gz, "../../compiled/${template.id}.tar.gz")
         ))
     }
     private fun metadataToString(m: Metadata): String {
@@ -83,6 +114,10 @@ class Pool(pteroHost: String, appToken: String, clientToken: String) {
         init {
             PluginManager.callServiceCreate(this)
         }
+
+        /**
+         * Ends (Destroys) this service, deletes the server and then calls the plugins service end function.
+         */
         fun end() {
             server.deleteServer()
             PluginManager.callServiceEnd(this)

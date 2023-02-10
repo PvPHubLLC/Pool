@@ -6,9 +6,14 @@ object PluginManager {
     val pool = Pool.instance!!
     private val plugins = mutableListOf<PoolPlugin>()
 
+    /**
+     * Adds a PoolPlugin to the running instance of pool.
+     * @param plugin The plugin
+     */
     fun addPlugin(plugin: PoolPlugin) {
         plugins.add(plugin)
     }
+
     fun callServiceCreate(s: Pool.Service) {
         plugins.forEach { it.onServiceCreate(s) }
     }
