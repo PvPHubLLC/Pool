@@ -3,11 +3,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     kotlin("jvm") version "1.7.10"
     id("com.github.johnrengelman.shadow") version "7.0.0"
-
+    `maven-publish`
 }
 
 group = "co.pvphub"
-version = "1.0-SNAPSHOT"
+version = "1.0"
 
 repositories {
     mavenCentral()
@@ -37,4 +37,22 @@ tasks {
     build {
         dependsOn(shadowJar)
     }
+}
+publishing {
+    repositories {
+        maven {
+            name = "pvphub-private"
+            url = uri("https://maven.pvphub.me/private")
+            credentials {
+                username = System.getenv("PVPHUB_MAVEN_USERNAME")
+                password = System.getenv("PVPHUB_MAVEN_SECRET")
+            }
+        }
+    }
+    publications {
+        create<MavenPublication>(project.name) {
+            from(components["java"])
+        }
+    }
+
 }
