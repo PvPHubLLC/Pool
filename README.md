@@ -34,8 +34,8 @@ The metadata is the templates settings, here is the format:
 ```json
 {
     "id": "hello", // Template ID must match with file name and folder name
-	"pterodactyl": {
-    	"nest": 0, // Nest ID
+    "pterodactyl": {
+        "nest": 0, // Nest ID
         "egg": 1,  // Egg ID, Keep in mind the server files from the egg will still be there.
         "env": { // (Optional) Server Environment Variables 
             "BRANCH": "main"
